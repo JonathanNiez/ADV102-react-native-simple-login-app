@@ -1,10 +1,31 @@
 import React, { useState } from "react";
-import { View, TextInput, Text, Button, StyleSheet } from "react-native";
+import { View, Text, Switch, StyleSheet, Pressable } from "react-native";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
+  const [isEnabled, setIsEnabled] = useState(false);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home Screen</Text>
+      <Switch
+        style={{ marginBottom: 10 }}
+        trackColor={{ false: "#767577", true: "#81b0ff" }}
+        thumbColor={isEnabled ? "#f5dd4b" : "#f4f3f4"}
+        onValueChange={() => {
+          setIsEnabled((previousState) => !previousState);
+        }}
+      />
+      <View style={styles.container}>
+        {isEnabled ? (
+          <Pressable
+            style={styles.button}
+            onPress={() => navigation.navigate("Profile")}
+          >
+            <Text>Go to Profile</Text>
+          </Pressable>
+        ) : (
+          <Text>Navigation is disabled</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -27,5 +48,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 5,
+  },
+  button: {
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 8,
+    borderColor: "gray",
+    borderWidth: 0.5,
   },
 });
