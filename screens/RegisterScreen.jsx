@@ -15,6 +15,10 @@ export default function RegisterScreen({ navigation }) {
     if (!email || !password) {
       alert("Please enter username and password");
       return;
+    } else if (password.length < 6 || confirmPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+    } else if (confirmPassword !== password) {
+      setError("Passwords do not match");
     } else {
       createUserWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
