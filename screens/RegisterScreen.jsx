@@ -1,8 +1,16 @@
 import React, { useState } from "react";
-import { View, TextInput, Text, StyleSheet, Pressable } from "react-native";
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import CustomButton from "../components/CustomButton";
 import CustomCard from "../components/CustomCard";
-import { auth } from "../firebase/firebase";
+import { auth, db } from "../firebase/firebaseConfig";
+import { setDoc, doc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function RegisterScreen({ navigation }) {
@@ -10,30 +18,72 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    if (!email || !password) {
-      alert("Please enter username and password");
+  function handleRegister() {
+    if (!email) {
+      setError("Email is required");
       return;
-    } else if (password.length < 6 || confirmPassword.length < 6) {
+    }
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    if (password.length < 6) {
       setError("Password must be at least 6 characters");
-    } else if (confirmPassword !== password) {
+      return;
+    }
+    if (confirmPassword !== password) {
       setError("Passwords do not match");
+      return;
     } else {
+      setLoading(true);
       createUserWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
           const user = userCredential.user;
-          navigation.navigate("Login");
+          addUserDataToFirestore(user);
           console.log(user.uid);
         })
         .catch((error) => {
           const errorCode = error.code;
-          const errorMessage = error.message;
+          let errorMessage;
+          switch (errorCode) {
+            case "auth/email-already-in-use":
+              errorMessage = "This email is already in use.";
+              break;
+            case "auth/invalid-email":
+              errorMessage = "Please enter a valid email address.";
+              break;
+            case "auth/weak-password":
+              errorMessage = "Password should be at least 6 characters.";
+              break;
+            default:
+              errorMessage = "An unexpected error occurred. Please try again.";
+          }
           setError(errorMessage);
-          console.log(errorCode, errorMessage);
+          console.log(errorCode, error.message);
+          setLoading(false);
         });
     }
-  };
+  }
+
+  async function addUserDataToFirestore(user) {
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        uid: user.uid,
+        createdAt: new Date().toISOString(),
+      });
+      setError("");
+      navigation.navigate("Login");
+      console.log("User added to Firestore");
+    } catch (firestoreError) {
+      setLoading(false);
+      console.error("Error adding user to Firestore:", firestoreError);
+      setError("Failed to save user data. Please try again.");
+      return;
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -43,12 +93,14 @@ export default function RegisterScreen({ navigation }) {
           style={styles.input}
           placeholder="Email"
           value={email}
+          editable={!loading}
           onChangeText={setEmail}
         />
         <TextInput
           style={styles.input}
           placeholder="Password"
           value={password}
+          editable={!loading}
           onChangeText={setPassword}
           secureTextEntry
         />
@@ -56,13 +108,21 @@ export default function RegisterScreen({ navigation }) {
           style={styles.input}
           placeholder="Confirm Password"
           value={confirmPassword}
+          editable={!loading}
           onChangeText={setConfirmPassword}
           secureTextEntry
         />
         {error ? (
           <Text style={{ color: "red", marginBottom: 10 }}>{error}</Text>
         ) : null}
-        <CustomButton title="Register" onPress={handleRegister} />
+        {loading ? (
+          <View>
+            <Text>Please wait...</Text>
+            <ActivityIndicator size="large" />
+          </View>
+        ) : (
+          <CustomButton title="Register" onPress={handleRegister} />
+        )}
         <Pressable onPress={() => navigation.navigate("Login")}>
           <Text>Already a member? Login here</Text>
         </Pressable>

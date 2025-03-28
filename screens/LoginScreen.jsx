@@ -1,34 +1,44 @@
-import React, { use, useState } from "react";
-import { View, TextInput, Text, StyleSheet, Pressable } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import CustomButton from "../components/CustomButton";
 import CustomCard from "../components/CustomCard";
-import { auth } from "../firebase/firebase";
+import { auth } from "../firebase/firebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  function handleLogin() {
     if (!email || !password) {
-      alert("Please enter username and password");
-      return;
+      setError("Please enter username and password");
     } else {
+      setLoading(true);
       signInWithEmailAndPassword(auth, email, password)
         .then((userCredential) => {
+          setLoading(false);
           const user = userCredential.user;
           navigation.navigate("Home");
           console.log(user.uid);
         })
         .catch((error) => {
+          setLoading(false);
           const errorCode = error.code;
           const errorMessage = error.message;
           setError(errorMessage);
           console.log(errorCode, errorMessage);
         });
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -38,20 +48,28 @@ export default function LoginScreen({ navigation }) {
           style={styles.input}
           placeholder="Email"
           value={email}
+          editable={!loading}
           onChangeText={setEmail}
         />
         <TextInput
           style={styles.input}
           placeholder="Password"
           value={password}
+          editable={!loading}
           onChangeText={setPassword}
           secureTextEntry
         />
         {error ? (
           <Text style={{ color: "red", marginBottom: 10 }}>{error}</Text>
         ) : null}
-
-        <CustomButton title="Login" onPress={handleLogin} />
+        {loading ? (
+          <View>
+            <ActivityIndicator size="large" />
+            <Text>Please wait...</Text>
+          </View>
+        ) : (
+          <CustomButton title="Login" onPress={handleLogin} />
+        )}
         <Pressable onPress={() => navigation.navigate("Register")}>
           <Text>Not a member? Register here</Text>
         </Pressable>
